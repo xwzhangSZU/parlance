@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { buildPrompt, generateSuggestions, SuggestError } from "./suggestClient";
+import { buildPrompt, generateSuggestions, isTransientGeminiError, SuggestError, withRetry } from "./suggestClient";
 import type { GeminiGenerator, PhraseHit, Suggestion } from "./types";
 
 const HITS: PhraseHit[] = [
@@ -47,6 +47,11 @@ describe("generateSuggestions", () => {
     await expect(generateSuggestions("x", HITS, CFG, gen)).rejects.toMatchObject({ kind: "network" });
   });
 
+  it("classifies an auth failure from the generator as no-api-key", async () => {
+    const gen: GeminiGenerator = async () => { throw { status: 403, message: "permission denied" }; };
+    await expect(generateSuggestions("x", HITS, CFG, gen)).rejects.toMatchObject({ kind: "no-api-key" });
+  });
+
   it("feeds the sentence and the passages into the prompt", async () => {
     let seen = "";
     const gen: GeminiGenerator = async (req) => { seen = req.prompt; return JSON.stringify(GOOD); };
@@ -70,5 +75,63 @@ describe("buildPrompt", () => {
     const p = buildPrompt("s", long, 6);
     expect(p).toContain("…");
     expect(p).not.toContain("字".repeat(1000));
+  });
+});
+
+describe("isTransientGeminiError", () => {
+  it("treats 5xx/429 status as transient", () => {
+    expect(isTransientGeminiError({ status: 503 })).toBe(true);
+    expect(isTransientGeminiError({ status: 429 })).toBe(true);
+    expect(isTransientGeminiError({ status: 500 })).toBe(true);
+  });
+
+  it("treats UNAVAILABLE / fetch failures as transient", () => {
+    expect(isTransientGeminiError({ message: "503 UNAVAILABLE high demand" })).toBe(true);
+    expect(isTransientGeminiError({ message: "fetch failed" })).toBe(true);
+  });
+
+  it("treats 400 and generic errors as non-transient", () => {
+    expect(isTransientGeminiError({ status: 400 })).toBe(false);
+    expect(isTransientGeminiError(new Error("boom"))).toBe(false);
+  });
+});
+
+describe("withRetry", () => {
+  const noSleep = async () => {};
+
+  it("retries a transient failure then succeeds", async () => {
+    let n = 0;
+    const fn = async () => {
+      n++;
+      if (n < 3) throw { status: 503 };
+      return "ok";
+    };
+    const out = await withRetry(fn, { attempts: 3, isTransient: isTransientGeminiError, delayMs: () => 0, sleep: noSleep });
+    expect(out).toBe("ok");
+    expect(n).toBe(3);
+  });
+
+  it("gives up after the attempt budget on persistent transient errors", async () => {
+    let n = 0;
+    const fn = async () => {
+      n++;
+      throw { status: 503 };
+    };
+    await expect(
+      withRetry(fn, { attempts: 3, isTransient: isTransientGeminiError, delayMs: () => 0, sleep: noSleep }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(n).toBe(3);
+  });
+
+  it("does not retry a non-transient error", async () => {
+    let n = 0;
+    const fn = async () => {
+      n++;
+      throw new Error("boom");
+    };
+    await expect(
+      withRetry(fn, { attempts: 3, isTransient: isTransientGeminiError, delayMs: () => 0, sleep: noSleep }),
+    ).rejects.toThrow("boom");
+    expect(n).toBe(1);
   });
 });

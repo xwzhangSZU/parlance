@@ -71,19 +71,69 @@ export function buildPrompt(text: string, hits: PhraseHit[], maxPassages: number
   ].join("\n\n");
 }
 
+const TRANSIENT_STATUS = new Set([429, 500, 502, 503, 504]);
+
+/** Transient = worth retrying: 429/5xx, Gemini UNAVAILABLE/RESOURCE_EXHAUSTED, or fetch/DNS errors. */
+export function isTransientGeminiError(e: unknown): boolean {
+  const status = (e as { status?: unknown }).status;
+  if (typeof status === "number" && TRANSIENT_STATUS.has(status)) {
+    return true;
+  }
+  const m = String((e as { message?: unknown }).message ?? "").toUpperCase();
+  return (
+    m.includes("UNAVAILABLE") ||
+    m.includes("RESOURCE_EXHAUSTED") ||
+    m.includes("ECONNRESET") ||
+    m.includes("ETIMEDOUT") ||
+    m.includes("ENOTFOUND") ||
+    m.includes("FETCH FAILED")
+  );
+}
+
+export interface RetryOptions {
+  attempts: number;
+  isTransient: (e: unknown) => boolean;
+  delayMs: (attempt: number) => number;
+  sleep: (ms: number) => Promise<void>;
+}
+
+export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= opts.attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      if (attempt < opts.attempts && opts.isTransient(e)) {
+        await opts.sleep(opts.delayMs(attempt));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
+const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const defaultGenerator: GeminiGenerator = async (req: GeminiRequest): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: req.apiKey });
-  const resp = await ai.models.generateContent({
-    model: req.model,
-    contents: req.prompt,
-    config: {
-      systemInstruction: req.systemInstruction,
-      responseMimeType: "application/json",
-      responseSchema: SUGGESTION_SCHEMA,
-      temperature: 0.4,
+  return withRetry(
+    async () => {
+      const resp = await ai.models.generateContent({
+        model: req.model,
+        contents: req.prompt,
+        config: {
+          systemInstruction: req.systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: SUGGESTION_SCHEMA,
+          temperature: 0.4,
+        },
+      });
+      return resp.text ?? "";
     },
-  });
-  return resp.text ?? "";
+    { attempts: 3, isTransient: isTransientGeminiError, delayMs: (a) => 700 * 2 ** (a - 1), sleep: realSleep },
+  );
 };
 
 function isRewrite(r: unknown): r is { text: string; basis: string } {
@@ -124,6 +174,22 @@ function parseSuggestion(raw: string): Suggestion {
   return parsed as Suggestion;
 }
 
+function classifyGenError(e: unknown): SuggestError {
+  if (e instanceof SuggestError) {
+    return e;
+  }
+  const status = (e as { status?: unknown }).status;
+  const msg = String((e as { message?: unknown }).message ?? "");
+  const up = msg.toUpperCase();
+  if (status === 401 || status === 403 || up.includes("API KEY") || up.includes("API_KEY") || up.includes("PERMISSION")) {
+    return new SuggestError("no-api-key", "Gemini 拒绝了 API key(无效或无权限),请检查 GEMINI_API_KEY。");
+  }
+  if (isTransientGeminiError(e)) {
+    return new SuggestError("network", "Gemini 暂时繁忙或不可用(已重试),请稍后再试。");
+  }
+  return new SuggestError("network", `调用 Gemini 失败:${msg.slice(0, 200) || "未知错误"},请重试。`);
+}
+
 export async function generateSuggestions(
   text: string,
   hits: PhraseHit[],
@@ -143,8 +209,8 @@ export async function generateSuggestions(
   let raw: string;
   try {
     raw = await gen({ apiKey: cfg.apiKey, model: cfg.model, systemInstruction: SYSTEM_INSTRUCTION, prompt });
-  } catch {
-    throw new SuggestError("network", "调用 Gemini 失败(网络或服务错误),请重试。");
+  } catch (e) {
+    throw classifyGenError(e);
   }
   return parseSuggestion(raw);
 }
