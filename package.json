@@ -2,7 +2,7 @@
   "name": "parlance",
   "displayName": "Parlance",
   "description": "Find how scholars phrased it — semantic phrasing search over your Zotero full-text via zsearch.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "xwzhangSZU",
   "license": "MIT",
   "repository": {
