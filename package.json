@@ -4,6 +4,23 @@
   "description": "Find how scholars phrased it — semantic phrasing search over your Zotero full-text via zsearch.",
   "version": "0.0.1",
   "publisher": "xwzhangSZU",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xwzhangSZU/parlance.git"
+  },
+  "homepage": "https://github.com/xwzhangSZU/parlance#readme",
+  "bugs": {
+    "url": "https://github.com/xwzhangSZU/parlance/issues"
+  },
+  "keywords": [
+    "zotero",
+    "semantic search",
+    "academic writing",
+    "rephrase",
+    "chinese",
+    "gemini"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },
