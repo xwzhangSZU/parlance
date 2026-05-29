@@ -36,7 +36,7 @@ describe("generateSuggestions", () => {
 
   it("parses a valid suggestion", async () => {
     const out = await generateSuggestions("x", HITS, CFG, genReturning(JSON.stringify(GOOD)));
-    expect(out).toEqual(GOOD);
+    expect(out).toEqual({ ...GOOD, model: "gemini-2.5-flash" });
   });
 
   it("classifies non-JSON as bad-output", async () => {
@@ -148,7 +148,7 @@ describe("generateSuggestions — Qwen fallback", () => {
     const primary: Generator = async () => { throw { status: 503 }; };
     const fallback: Generator = async () => JSON.stringify(GOOD);
     const out = await generateSuggestions("x", HITS, { ...CFG, fallbackApiKey: "qkey" }, primary, fallback);
-    expect(out).toEqual(GOOD);
+    expect(out).toEqual({ ...GOOD, model: "qwen-plus" });
   });
 
   it("passes the fallback model/key/baseUrl to the secondary generator", async () => {
@@ -171,7 +171,7 @@ describe("generateSuggestions — Qwen fallback", () => {
     const primary: Generator = async () => { throw new Error("primary should be skipped"); };
     const fallback: Generator = async () => JSON.stringify(GOOD);
     const out = await generateSuggestions("x", HITS, { ...CFG, apiKey: undefined, fallbackApiKey: "qkey" }, primary, fallback);
-    expect(out).toEqual(GOOD);
+    expect(out).toEqual({ ...GOOD, model: "qwen-plus" });
   });
 
   it("surfaces an error when both primary and fallback fail", async () => {

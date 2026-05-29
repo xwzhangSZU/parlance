@@ -20,6 +20,7 @@ export interface SuggestionState {
   kind: "loading" | "suggestions" | "error";
   count?: number;
   message?: string;
+  model?: string;
 }
 
 export class PanelProvider implements vscode.WebviewViewProvider {
@@ -90,7 +91,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
   }
 
   showSuggestions(s: Suggestion): void {
-    this.lastSuggestionState = { kind: "suggestions", count: s.rewrites.length };
+    this.lastSuggestionState = { kind: "suggestions", count: s.rewrites.length, model: s.model };
     this.post({ type: "suggestions", html: renderSuggestion(s) });
   }
 

@@ -33,7 +33,7 @@ This is a thin front-end over a local setup; it is most useful if you already ru
 
 ## Privacy & grounding
 
-Rewrite suggestions are generated **only** from the passages already retrieved from your own library; the model is instructed not to invent sources, statute numbers, authors, or facts. Transient model errors (e.g. 503) are retried with backoff, and if Gemini stays unavailable the request automatically falls back to Qwen (when `DASHSCOPE_API_KEY` is set). Your draft text is never modified by the extension — suggestions are copy-only.
+Rewrite suggestions are generated **only** from the passages already retrieved from your own library; the model is instructed not to invent sources, statute numbers, authors, or facts. Transient model errors (e.g. 503) are retried with backoff, and if Gemini stays unavailable the request automatically falls back to Qwen (when `DASHSCOPE_API_KEY` is set). The suggestion panel labels which model produced it (Gemini or the Qwen fallback). Your draft text is never modified by the extension — suggestions are copy-only.
 
 ## License
 

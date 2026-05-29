@@ -132,6 +132,7 @@ describe("Parlance suggestions golden path — requires GEMINI_API_KEY", () => {
       assert.ok(st, "suggestion state set");
       assert.strictEqual(st.kind, "suggestions", `expected suggestions, got ${st.kind}: ${st.message ?? ""}`);
       assert.ok((st.count ?? 0) >= 1, "at least one rewrite");
+      assert.strictEqual(st.model, "gemini-2.5-flash", "badge reflects the pinned Gemini model");
     } finally {
       await cfg.update("topK", undefined, vscode.ConfigurationTarget.Global);
       await cfg.update("suggestModel", undefined, vscode.ConfigurationTarget.Global);
@@ -170,6 +171,7 @@ describe("Parlance Qwen fallback golden path — requires DASHSCOPE_API_KEY", ()
       assert.ok(st, "suggestion state set");
       assert.strictEqual(st.kind, "suggestions", `expected suggestions via Qwen fallback, got ${st.kind}: ${st.message ?? ""}`);
       assert.ok((st.count ?? 0) >= 1, "at least one rewrite from the Qwen fallback");
+      assert.strictEqual(st.model, "qwen-plus", "badge reflects the Qwen fallback model");
     } finally {
       await cfg.update("suggestModel", undefined, vscode.ConfigurationTarget.Global);
       await cfg.update("fallbackModel", undefined, vscode.ConfigurationTarget.Global);

@@ -31,6 +31,8 @@ export interface Suggestion {
   diagnosis: string;
   rewrites: { text: string; basis: string }[];
   phrasings: { text: string; source: string }[];
+  /** Which model produced this (set by generateSuggestions, not the model). */
+  model?: string;
 }
 
 export interface SuggestConfig {

@@ -239,6 +239,7 @@ export async function generateSuggestions(
   }
   const prompt = buildPrompt(text, hits, cfg.maxPassages);
   let raw: string | undefined;
+  let usedModel: string | undefined;
   let lastErr: unknown;
 
   if (cfg.apiKey) {
@@ -246,6 +247,7 @@ export async function generateSuggestions(
       const out = await primary({ apiKey: cfg.apiKey, model: cfg.model, systemInstruction: SYSTEM_INSTRUCTION, prompt });
       if (out && out.trim()) {
         raw = out;
+        usedModel = cfg.model;
       } else {
         lastErr = new SuggestError("bad-output", "主模型返回空内容。");
       }
@@ -270,6 +272,7 @@ export async function generateSuggestions(
       });
       if (out && out.trim()) {
         raw = out;
+        usedModel = cfg.fallbackModel;
       } else {
         lastErr = new SuggestError("bad-output", "回退模型返回空内容。");
       }
@@ -281,5 +284,5 @@ export async function generateSuggestions(
   if (raw === undefined) {
     throw classifyGenError(lastErr);
   }
-  return parseSuggestion(raw);
+  return { ...parseSuggestion(raw), model: usedModel };
 }

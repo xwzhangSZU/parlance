@@ -34,4 +34,16 @@ describe("renderSuggestion", () => {
     expect(html).not.toContain("<script>x</script>");
     expect(html).toContain("&lt;script&gt;");
   });
+
+  it("shows a Qwen badge for a qwen model", () => {
+    expect(renderSuggestion({ ...S, model: "qwen-plus" })).toContain("Qwen");
+  });
+
+  it("shows a Gemini badge for a gemini model", () => {
+    expect(renderSuggestion({ ...S, model: "gemini-3.5-flash" })).toContain("Gemini");
+  });
+
+  it("omits the model badge when model is unset", () => {
+    expect(renderSuggestion(S)).not.toContain("由");
+  });
 });
