@@ -1,9 +1,15 @@
 import * as vscode from "vscode";
 import { PanelProvider } from "./providers/panelProvider";
+import type { PanelState } from "./providers/panelProvider";
 import { readConfig } from "./core/config";
 import { findPhrases } from "./core/zsearchClient";
 
-export function activate(context: vscode.ExtensionContext): void {
+/** Public API returned by activate(), consumed by integration tests. */
+export interface ParlanceApi {
+  getLastState(): PanelState | undefined;
+}
+
+export function activate(context: vscode.ExtensionContext): ParlanceApi {
   const provider = new PanelProvider(context.extensionUri);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(PanelProvider.viewType, provider),
@@ -27,6 +33,8 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
   );
+
+  return { getLastState: () => provider.lastState };
 }
 
 export function deactivate(): void {}

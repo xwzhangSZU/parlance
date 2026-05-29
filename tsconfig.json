@@ -10,5 +10,10 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Integration tests (src/test) use mocha globals + the `vscode` module and are
+  // type-checked separately via tsconfig.test.json. The jsdom webview test needs
+  // the DOM lib, which must not leak into this node-targeted extension build, so
+  // it is run by vitest (jsdom env) and kept out of this typecheck.
+  "exclude": ["src/test", "src/**/*.dom.test.ts"]
 }

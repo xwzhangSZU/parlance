@@ -1,0 +1,91 @@
+import * as assert from "node:assert";
+
+import * as vscode from "vscode";
+
+import type { ParlanceApi } from "../../extension";
+
+const EXT_ID = "xwzhangSZU.parlance";
+const SAMPLE = "个人信息处理者负有合规义务";
+
+async function getApi(): Promise<ParlanceApi> {
+  const ext = vscode.extensions.getExtension<ParlanceApi>(EXT_ID);
+  assert.ok(ext, `extension ${EXT_ID} not found`);
+  return ext.activate();
+}
+
+async function selectAll(content: string): Promise<void> {
+  const doc = await vscode.workspace.openTextDocument({ content, language: "plaintext" });
+  const editor = await vscode.window.showTextDocument(doc);
+  const end = doc.lineAt(doc.lineCount - 1).range.end;
+  editor.selection = new vscode.Selection(0, 0, end.line, end.character);
+}
+
+describe("Parlance extension — no API key required", () => {
+  it("activates without throwing", async () => {
+    const ext = vscode.extensions.getExtension(EXT_ID);
+    assert.ok(ext, "extension is present");
+    await ext.activate();
+    assert.strictEqual(ext.isActive, true);
+  });
+
+  it("registers the findSimilarPhrasing command", async () => {
+    await getApi();
+    const commands = await vscode.commands.getCommands(true);
+    assert.ok(
+      commands.includes("parlance.findSimilarPhrasing"),
+      "parlance.findSimilarPhrasing should be registered",
+    );
+  });
+
+  it("does not throw when run with no selection", async () => {
+    await getApi();
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+    // No active editor → command shows a warning and returns; must not throw.
+    await vscode.commands.executeCommand("parlance.findSimilarPhrasing");
+  });
+
+  it("enters the error state when zsearchPath is invalid", async () => {
+    const api = await getApi();
+    const cfg = vscode.workspace.getConfiguration("parlance");
+    await cfg.update("zsearchPath", "zsearch-nope-xyz", vscode.ConfigurationTarget.Global);
+    try {
+      await selectAll(SAMPLE);
+      await vscode.commands.executeCommand("parlance.findSimilarPhrasing");
+      const state = api.getLastState();
+      assert.ok(state, "panel state should be set");
+      assert.strictEqual(state.kind, "error", `expected error, got ${state.kind}`);
+      assert.ok(state.message && state.message.length > 0, "error has a message");
+    } finally {
+      await cfg.update("zsearchPath", undefined, vscode.ConfigurationTarget.Global);
+    }
+  });
+});
+
+describe("Parlance golden path — requires GEMINI_API_KEY + a populated index", () => {
+  it("returns real passages for a Chinese selection", async function () {
+    if (!process.env.GEMINI_API_KEY) {
+      console.log("[skip] GEMINI_API_KEY not in env — skipping live golden path");
+      this.skip();
+    }
+    this.timeout(120000);
+
+    const api = await getApi();
+    const cfg = vscode.workspace.getConfiguration("parlance");
+    await cfg.update("zsearchPath", undefined, vscode.ConfigurationTarget.Global);
+    await cfg.update("topK", 5, vscode.ConfigurationTarget.Global);
+    try {
+      await selectAll(SAMPLE);
+      await vscode.commands.executeCommand("parlance.findSimilarPhrasing");
+      const state = api.getLastState();
+      assert.ok(state, "panel state should be set");
+      assert.strictEqual(
+        state.kind,
+        "results",
+        `expected results, got ${state.kind}: ${state.message ?? ""}`,
+      );
+      assert.ok((state.count ?? 0) >= 1, "at least one passage returned");
+    } finally {
+      await cfg.update("topK", undefined, vscode.ConfigurationTarget.Global);
+    }
+  });
+});

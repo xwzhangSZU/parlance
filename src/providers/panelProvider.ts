@@ -3,8 +3,20 @@ import * as vscode from "vscode";
 import { renderHits } from "../webview/render";
 import type { PhraseHit } from "../core/types";
 
+/**
+ * Read-only snapshot of the panel's last state. Exposed purely for
+ * integration tests (the webview DOM is not reachable from the test host);
+ * production code only writes it and never reads it back.
+ */
+export interface PanelState {
+  kind: "loading" | "results" | "error";
+  count?: number;
+  message?: string;
+}
+
 export class PanelProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "parlance.results";
+  public lastState?: PanelState;
   private view?: vscode.WebviewView;
   private pending?: { type: string; [k: string]: unknown };
 
@@ -32,14 +44,17 @@ export class PanelProvider implements vscode.WebviewViewProvider {
   }
 
   showLoading(): void {
+    this.lastState = { kind: "loading" };
     this.post({ type: "loading" });
   }
 
   showResults(hits: PhraseHit[]): void {
+    this.lastState = { kind: "results", count: hits.length };
     this.post({ type: "results", html: renderHits(hits) });
   }
 
   showError(message: string): void {
+    this.lastState = { kind: "error", message };
     this.post({ type: "error", message });
   }
 

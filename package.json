@@ -4,26 +4,45 @@
   "description": "Find how scholars phrased it — semantic phrasing search over your Zotero full-text via zsearch.",
   "version": "0.0.1",
   "publisher": "xwzhangSZU",
-  "engines": { "vscode": "^1.90.0" },
-  "categories": ["Other"],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
-      { "command": "parlance.findSimilarPhrasing", "title": "Parlance: 查找相近表达" }
+      {
+        "command": "parlance.findSimilarPhrasing",
+        "title": "Parlance: 查找相近表达"
+      }
     ],
     "menus": {
       "editor/context": [
-        { "command": "parlance.findSimilarPhrasing", "when": "editorHasSelection", "group": "navigation@9" }
+        {
+          "command": "parlance.findSimilarPhrasing",
+          "when": "editorHasSelection",
+          "group": "navigation@9"
+        }
       ]
     },
     "viewsContainers": {
       "activitybar": [
-        { "id": "parlance", "title": "Parlance", "icon": "media/icon.svg" }
+        {
+          "id": "parlance",
+          "title": "Parlance",
+          "icon": "media/icon.svg"
+        }
       ]
     },
     "views": {
       "parlance": [
-        { "id": "parlance.results", "type": "webview", "name": "相近表达" }
+        {
+          "id": "parlance.results",
+          "type": "webview",
+          "name": "相近表达"
+        }
       ]
     },
     "configuration": {
@@ -47,12 +66,20 @@
     "watch": "npm run build -- --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "compile:test": "tsc -p tsconfig.test.json",
+    "pretest:integration": "npm run build && npm run compile:test",
+    "test:integration": "vscode-test",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
     "@types/node": "^20",
     "@types/vscode": "^1.90.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.21.0",
+    "jsdom": "^29.1.1",
+    "mocha": "^11.7.6",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
   }
