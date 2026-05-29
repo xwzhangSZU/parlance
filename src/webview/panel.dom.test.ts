@@ -89,3 +89,36 @@ describe("panel.js — incoming messages update the panel", () => {
     expect(root.querySelector(".error")?.textContent).toBe("<script>alert(1)</script>");
   });
 });
+
+describe("panel.js — suggestions", () => {
+  it("shows the suggest button when results have hits and posts suggest on click", () => {
+    const { postMessage, root } = loadPanel("");
+    postToWebview({ type: "results", html: '<div class="hit">HIT</div>', count: 1 });
+    const btn = root.querySelector("#suggest-btn");
+    expect(btn, "suggest button rendered").toBeTruthy();
+    click(btn!);
+    expect(postMessage).toHaveBeenCalledWith({ type: "suggest" });
+  });
+
+  it("hides the suggest button when there are no hits", () => {
+    const { root } = loadPanel("");
+    postToWebview({ type: "results", html: '<div class="empty">none</div>', count: 0 });
+    expect(root.querySelector("#suggest-btn")).toBeNull();
+  });
+
+  it("fills the suggest slot, leaving the hits intact", () => {
+    const { root } = loadPanel("");
+    postToWebview({ type: "results", html: '<div class="hit">HIT</div>', count: 1 });
+    postToWebview({ type: "suggestions", html: '<div class="suggestion">SG</div>' });
+    expect(root.querySelector("#suggest-slot")?.textContent).toContain("SG");
+    expect(root.querySelector("#hits")?.textContent).toContain("HIT");
+  });
+
+  it("renders a suggestion error as text, never as HTML (XSS-safe)", () => {
+    const { root } = loadPanel("");
+    postToWebview({ type: "results", html: '<div class="hit">x</div>', count: 1 });
+    postToWebview({ type: "suggestion-error", message: "<script>boom</script>" });
+    expect(root.querySelector("#suggest-slot script")).toBeNull();
+    expect(root.querySelector("#suggest-slot .error")?.textContent).toBe("<script>boom</script>");
+  });
+});

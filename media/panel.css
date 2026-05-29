@@ -17,3 +17,16 @@ button { background: transparent; color: var(--pl-accent); border: 1px solid var
 button:hover { background: var(--vscode-toolbar-hoverBackground, #313244); }
 .loading { color: var(--pl-muted); padding: 16px 8px; }
 .error { color: var(--vscode-errorForeground, #f38ba8); padding: 16px 8px; line-height: 1.6; }
+.suggest-bar { margin: 0 0 10px; }
+#suggest-btn { background: var(--pl-accent); color: var(--pl-bg); border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+#suggest-btn:hover { opacity: 0.9; }
+.suggestion { border: 1px solid var(--pl-border); border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+.sg-warn { color: var(--vscode-editorWarning-foreground, #f9e2af); font-size: 11px; margin-bottom: 8px; }
+.sg-sec { margin-bottom: 10px; }
+.sg-h { font-weight: 600; font-size: 12px; color: var(--pl-muted); margin-bottom: 4px; }
+.sg-diag { line-height: 1.6; }
+.rw { border-left: 3px solid var(--pl-accent); padding: 0 0 0 10px; margin-bottom: 8px; }
+.rw-text { line-height: 1.6; white-space: pre-wrap; }
+.rw-basis { color: var(--pl-muted); font-size: 12px; margin: 2px 0 4px; }
+.sg-ph { margin: 0; padding-left: 18px; line-height: 1.7; }
+.sg-ph .src { color: var(--pl-muted); font-size: 12px; }
